@@ -3,6 +3,8 @@ package io.github.versi.kvips
 interface KVips {
 
     fun init(params: KVipsInitParams)
+
+    fun shutdown()
 }
 
 class KVipsInitException(message: String) : RuntimeException(message)

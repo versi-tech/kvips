@@ -19,6 +19,10 @@ object KVipsNative : KVips {
         vips_concurrency_set(params.concurrency)
     }
 
+    override fun shutdown() {
+        vips_shutdown()
+    }
+
     /**
      * based on: https://github.com/libvips/libvips/issues/1498
      */
