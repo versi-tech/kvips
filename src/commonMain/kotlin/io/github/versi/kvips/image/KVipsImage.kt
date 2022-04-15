@@ -16,7 +16,7 @@ data class KVipsImageQuality(val value: Int = 75) {
 }
 
 data class KVipsImageOutputParams(
-    val format: KVipsImageFormat,
+    val format: KVipsImageFormat?,
     val quality: KVipsImageQuality = KVipsImageQuality(),
     val stripMetadata: Boolean = true
 )

@@ -288,7 +288,8 @@ internal fun CPointer<VipsImage>.writeToBufferOperation(
         this.writeToBuffer(
             imageBuffer,
             imageSize,
-            params
+            params,
+            memScope
         )
         imageBuffer.value?.let { bytes ->
             return KVipsImageOperationSuccess(bytes.readBytes(imageSize.value.toInt()))
@@ -310,15 +311,17 @@ internal fun CPointer<VipsImage>.writeToBufferOperation(
 private fun CValuesRef<VipsImage>.writeToBuffer(
     buffer: COpaquePointerVar,
     imageSize: size_tVar,
-    outputImageParams: KVipsImageOutputParams
+    outputImageParams: KVipsImageOutputParams,
+    memScope: MemScope
 ) {
     val strip = if (outputImageParams.stripMetadata) TRUE else FALSE
-    if (outputImageParams.format == KVipsImageGIF) {
+    val outputFormat = outputImageParams.format ?: this.getFormat(memScope)
+    if (outputFormat == KVipsImageGIF) {
         // vips_gifsave_buffer used under the hood for GIF does not support Quality param currently:
         // https://www.libvips.org/API/current/VipsForeignSave.html#vips-gifsave-buffer
         if (vips_image_write_to_buffer(
                 this,
-                outputImageParams.format.extension,
+                outputFormat.extension,
                 buffer.ptr,
                 imageSize.ptr,
                 "strip",
@@ -331,7 +334,7 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
     } else {
         if (vips_image_write_to_buffer(
                 this,
-                outputImageParams.format.extension,
+                outputFormat.extension,
                 buffer.ptr,
                 imageSize.ptr,
                 "Q",
@@ -379,6 +382,22 @@ internal fun COpaquePointer.readUBytes(count: Int): ByteArray {
         ++index
     }
     return result
+}
+
+/**
+ * Based on: https://www.libvips.org/API/current/libvips-header.html#VIPS-META-LOADER:CAPS
+ */
+internal fun CValuesRef<VipsImage>.getFormat(memScope: MemScope): KVipsImageFormat {
+    if (vips_image_get_typeof(this, VIPS_META_LOADER).toUInt() != 0U) {
+        val loaderString = memScope.allocPointerTo<ByteVar>()
+        vips_image_get_string(this, VIPS_META_LOADER, loaderString.ptr)
+        val loaderName = loaderString.value?.toKString()
+        loaderName?.let {
+            return KVipsImageFormat.fromLoader(it)
+        }
+        throw KVipsImageFormatReadException()
+    }
+    throw KVipsImageFormatReadException()
 }
 
 // source: https://www.libvips.org/API/current/libvips-conversion.html#VipsInteresting

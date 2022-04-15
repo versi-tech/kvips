@@ -212,7 +212,6 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
      * and prints error on process stop: gifsave_target: frame too large
      */
     private fun validateRequestedGifSize(width: Int, height: Int) {
-        println("GIF log, width: $width and height: $height")
         if (width * height > 2000 * 2000) {
             throw KVipsImageOperationException("Requested GIF animation frame to large. Area of 2000 x 2000 pixels is the supported maximum.")
         }
