@@ -10,6 +10,9 @@ object KVipsNative : KVips {
         if (!params.loggingEnabled) {
             disableLogging()
         }
+        // needs to be called before vips_init which checks env var VIPS_MIN_STACK_SIZE internally
+        setMinStackSize(params.minStackSizeInMb)
+
         if (vips_init(params.applicationName) < 0) {
             throw KVipsInitException("Failed to init KVips.")
         }
@@ -28,5 +31,12 @@ object KVipsNative : KVips {
      */
     private fun disableLogging() {
         setenv("VIPS_WARNING", "0", 1)
+    }
+
+    /**
+     * based on: https://github.com/libvips/libvips/issues/2761
+     */
+    private fun setMinStackSize(minStackSizeInMb: Int) {
+        setenv("VIPS_MIN_STACK_SIZE", "${minStackSizeInMb}m", 1)
     }
 }
