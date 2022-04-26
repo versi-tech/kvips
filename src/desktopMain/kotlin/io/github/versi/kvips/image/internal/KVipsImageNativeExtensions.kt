@@ -329,7 +329,7 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to save image to buffer.")
+            throw KVipsImageOperationException("Failed to save image to buffer with params: $outputImageParams")
         }
     } else {
         if (vips_image_write_to_buffer(
@@ -344,7 +344,7 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to save image to buffer.")
+            throw KVipsImageOperationException("Failed to save image to buffer with params: $outputImageParams")
         }
     }
 }
