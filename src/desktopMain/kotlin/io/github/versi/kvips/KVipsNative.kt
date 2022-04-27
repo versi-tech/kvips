@@ -26,6 +26,23 @@ object KVipsNative : KVips {
         vips_shutdown()
     }
 
+    override fun getMemoryReport(): KVipsMemoryReport {
+        val maxOperations = vips_cache_get_max()
+        val currentOperations = vips_cache_get_size()
+        val maxMemory = vips_cache_get_max_mem()
+        val currentMemory = vips_tracked_get_mem()
+        val maxFiles = vips_cache_get_max_files()
+        val currentFiles = vips_tracked_get_files()
+        return KVipsMemoryReport(
+            currentOperations = currentOperations,
+            maxOperations = maxOperations,
+            currentMemory = currentMemory,
+            maxMemory = maxMemory,
+            currentFiles = currentFiles,
+            maxFiles = maxFiles
+        )
+    }
+
     /**
      * based on: https://github.com/libvips/libvips/issues/1498
      */
