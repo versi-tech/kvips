@@ -195,8 +195,7 @@ class KVipsImageComposeByteArrayOperationParams(
     )
 
 class KVipsImageComposeGradientOperationParams(
-    gradients: List<Gradient>,
-    direction: Direction = Direction.Top
+    gradients: List<Gradient>
 ) :
     KVipsImageComposeOperationParams(
         1.0f,
@@ -212,15 +211,30 @@ class KVipsImageComposeGradientOperationParams(
      */
     private val gradientSvgSecondPart = """
           <defs>
-           <linearGradient id="lgrad" x1="${direction.x1}%" y1="${direction.y1}%" x2="${direction.x2}%" y2="${direction.y2}%" >
-                  ${gradients.toSvgString()}
-            </linearGradient>
+            ${gradients.toSvg()}
           </defs>
-          <rect x="0" y="0" width="100%" height="100%" fill="url(#lgrad)"/>
+          ${gradients.toRects()}
         </svg>
     """.trimIndent()
 
-    data class Gradient(val color: String, val offset: Int) {
+    data class Gradient(val id: String, val offsets: List<GradientOffset>, val direction: Direction = Direction.Top) {
+
+        override fun toString(): String {
+            return """
+            <linearGradient id="$id" x1="${direction.x1}%" y1="${direction.y1}%" x2="${direction.x2}%" y2="${direction.y2}%" >
+                ${offsets.toSvgString()}
+            </linearGradient>
+            """.trimIndent()
+        }
+
+        private fun List<GradientOffset>.toSvgString(): String {
+            return this.sortedBy { it.offset }.joinToString(separator = "\n") {
+                """<stop offset="${it.offset}%" style="stop-color:${it.color}" />"""
+            }
+        }
+    }
+
+    data class GradientOffset(val color: String, val offset: Int) {
         init {
             require(isRGB(color)) {
                 "Gradient color should be defined in RGB/RGBA color format"
@@ -266,9 +280,15 @@ class KVipsImageComposeGradientOperationParams(
         return getSvgSizePart(width, height) + gradientSvgSecondPart
     }
 
-    private fun List<Gradient>.toSvgString(): String {
-        return this.sortedBy { it.offset }.joinToString(separator = "\n") {
-            """<stop offset="${it.offset}%" style="stop-color:${it.color}" />"""
+    private fun List<Gradient>.toSvg(): String {
+        return this.joinToString(separator = "\n") { it.toString() }
+    }
+
+    private fun List<Gradient>.toRects(): String {
+        return this.joinToString(separator = "\n") {
+            """
+                <rect x="0" y="0" width="100%" height="100%" fill="url(#${it.id})"/>
+            """.trimIndent()
         }
     }
 
