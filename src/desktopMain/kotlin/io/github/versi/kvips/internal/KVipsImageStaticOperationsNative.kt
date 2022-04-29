@@ -13,24 +13,21 @@ import kotlinx.cinterop.*
 internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
 
     private val memScope = MemScope()
-    private lateinit var image: CPointer<VipsImage>
+    private var image: CPointer<VipsImage>
+    private val data: Pinned<UByteArray>
 
     constructor(inputData: ByteArray) {
-        inputData.toUByteArray().usePinned { pinnedImageData ->
-            image =
-                pinnedImageData.asVipsImage(pinnedImageData.get().size)
-                    ?: throw KVipsImageOperationException("Failed to load input image.")
-        }
+        data = inputData.toUByteArray().pin()
+        image = data.asVipsImage(data.get().size) ?: throw KVipsImageOperationException("Failed to load input image.")
     }
 
     constructor(
         inputData: ByteArray,
         params: KVipsImageThumbnailOperationParams
     ) {
-        inputData.toUByteArray().usePinned { pinnedImageData ->
-            image = pinnedImageData.thumbnailBuffer(params, memScope).value
-                ?: throw KVipsImageOperationException("Failed to load input image.")
-        }
+        data = inputData.toUByteArray().pin()
+        image = data.thumbnailBuffer(params, memScope).value
+            ?: throw KVipsImageOperationException("Failed to load input image.")
     }
 
     override fun thumbnail(params: KVipsImageThumbnailOperationParams): KVipsImageOperations {
@@ -56,6 +53,7 @@ internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
     override fun finalize(params: KVipsImageOutputParams): KVipsImageOperationResult {
         memScope.defer {
             vips_thread_shutdown()
+            data.unpin()
         }
 
         return image.writeToBufferOperation(params, memScope)
@@ -67,6 +65,7 @@ internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
         // this won't affect the app and is safer that lack of deallocating memory in case there's exception
         // on the user side without finalize/dispose call and freeing memory
         image.unref()
+        data.unpin()
     }
 
     private fun performOperation(

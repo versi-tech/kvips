@@ -440,3 +440,21 @@ private fun KVipsImageThumbnailOperationParams.resolveDimensions(): Pair<Int, In
     }
     return Pair(targetWidth, targetHeight)
 }
+
+fun vipsBufferCleaner(image: CPointer<VipsImage>?, imageBuffer: COpaquePointer?) {
+    g_free(imageBuffer)
+}
+
+/**
+ * Based on: https://gist.github.com/kropp/9b8b9578b9421e932f932bb6aed9598a
+ */
+// Note that all callback parameters must be primitive types or nullable C pointers.
+fun <F : CFunction<*>> gSignalConnect(
+    obj: CPointer<*>, actionName: String,
+    action: CPointer<F>, data: gpointer? = null, connectFlags: GConnectFlags = 0U
+) {
+    g_signal_connect_data(
+        obj.reinterpret(), actionName, action.reinterpret(),
+        data = data, destroy_data = null, connect_flags = connectFlags
+    )
+}
