@@ -16,28 +16,27 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
     private var imagesContext: CPointer<VipsObject>? = null
     private var imageFrames: CPointer<CPointerVar<VipsImage>>? = null
     private var numberOfPages: Int = 0
+    private val data: Pinned<UByteArray>
 
     constructor(inputData: ByteArray) {
-        inputData.toUByteArray().usePinned { pinnedImageData ->
-            val inputAnimation =
-                pinnedImageData.asVipsImage(pinnedImageData.get().size, loadAllFrames = true)
-                    ?: throw KVipsImageOperationException("Failed to load input image.")
-            numberOfPages = vips_image_get_n_pages(inputAnimation)
-            loadAnimationFrames(inputAnimation)
-        }
+        data = inputData.toUByteArray().pin()
+        val inputAnimation =
+            data.asVipsImage(data.get().size, loadAllFrames = true)
+                ?: throw KVipsImageOperationException("Failed to load input image.")
+        numberOfPages = vips_image_get_n_pages(inputAnimation)
+        loadAnimationFrames(inputAnimation)
     }
 
     constructor(
         inputData: ByteArray,
         params: KVipsImageCropOperationParams
     ) {
-        inputData.toUByteArray().usePinned { pinnedImageData ->
-            val inputAnimation =
-                pinnedImageData.asVipsImage(pinnedImageData.get().size, loadAllFrames = true)
-                    ?: throw KVipsImageOperationException("Failed to load input image.")
-            numberOfPages = vips_image_get_n_pages(inputAnimation)
-            loadAnimationFrames(inputAnimation, params)
-        }
+        data = inputData.toUByteArray().pin()
+        val inputAnimation =
+            data.asVipsImage(data.get().size, loadAllFrames = true)
+                ?: throw KVipsImageOperationException("Failed to load input image.")
+        numberOfPages = vips_image_get_n_pages(inputAnimation)
+        loadAnimationFrames(inputAnimation, params)
     }
 
     override fun thumbnail(params: KVipsImageThumbnailOperationParams): KVipsImageOperations {
@@ -63,6 +62,7 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
     override fun finalize(params: KVipsImageOutputParams): KVipsImageOperationResult {
         memScope.defer {
             vips_thread_shutdown()
+            data.unpin()
         }
         val context = vips_image_new()?.reinterpret<VipsObject>()
         try {
@@ -85,6 +85,7 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
     // on the user side without finalize/dispose call and freeing memory
     override fun dispose() {
         imagesContext.unref()
+        data.unpin()
     }
 
     private fun loadAnimationFrames(
