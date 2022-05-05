@@ -1,10 +1,10 @@
 plugins {
-    kotlin("multiplatform") version "1.6.20"
+    kotlin("multiplatform") version "1.6.21"
     id("maven-publish")
 }
 
 group = "io.github.versi.kvips"
-version = "0.0.11"
+version = "0.0.12"
 
 repositories {
     mavenCentral()
