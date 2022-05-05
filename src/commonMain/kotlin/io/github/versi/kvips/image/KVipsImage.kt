@@ -317,3 +317,12 @@ interface KVipsImageOperations {
      */
     fun dispose()
 }
+
+inline fun <T : KVipsImageOperations?, R> T.use(block: (T) -> R): R {
+    try {
+        return block.invoke(this)
+    } catch (exception: Exception) {
+        this?.dispose()
+        throw exception
+    }
+}

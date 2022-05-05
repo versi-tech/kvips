@@ -18,7 +18,13 @@ internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
 
     constructor(inputData: ByteArray) {
         data = inputData.toUByteArray().pin()
-        image = data.asVipsImage(data.get().size) ?: throw KVipsImageOperationException("Failed to load input image.")
+        val baseImage = data.asVipsImage(data.get().size)
+        if (baseImage == null) {
+            data.unpin()
+            throw KVipsImageOperationException("Failed to load input image.")
+        }
+
+        image = baseImage
     }
 
     constructor(
@@ -26,8 +32,13 @@ internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
         params: KVipsImageThumbnailOperationParams
     ) {
         data = inputData.toUByteArray().pin()
-        image = data.thumbnailBuffer(params, memScope).value
-            ?: throw KVipsImageOperationException("Failed to load input image.")
+        val baseImage = data.thumbnailBuffer(params, memScope).value
+        if (baseImage == null) {
+            data.unpin()
+            throw KVipsImageOperationException("Failed to load input image.")
+        }
+
+        image = baseImage
     }
 
     override fun thumbnail(params: KVipsImageThumbnailOperationParams): KVipsImageOperations {

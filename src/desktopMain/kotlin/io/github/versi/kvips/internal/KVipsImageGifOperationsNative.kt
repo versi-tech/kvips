@@ -20,11 +20,14 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
 
     constructor(inputData: ByteArray) {
         data = inputData.toUByteArray().pin()
-        val inputAnimation =
-            data.asVipsImage(data.get().size, loadAllFrames = true)
-                ?: throw KVipsImageOperationException("Failed to load input image.")
-        numberOfPages = vips_image_get_n_pages(inputAnimation)
-        loadAnimationFrames(inputAnimation)
+        val baseAnimation = data.asVipsImage(data.get().size, loadAllFrames = true)
+        if (baseAnimation == null) {
+            data.unpin()
+            throw KVipsImageOperationException("Failed to load input image.")
+        }
+
+        numberOfPages = vips_image_get_n_pages(baseAnimation)
+        loadAnimationFrames(baseAnimation)
     }
 
     constructor(
@@ -32,11 +35,14 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
         params: KVipsImageCropOperationParams
     ) {
         data = inputData.toUByteArray().pin()
-        val inputAnimation =
-            data.asVipsImage(data.get().size, loadAllFrames = true)
-                ?: throw KVipsImageOperationException("Failed to load input image.")
-        numberOfPages = vips_image_get_n_pages(inputAnimation)
-        loadAnimationFrames(inputAnimation, params)
+        val baseAnimation = data.asVipsImage(data.get().size, loadAllFrames = true)
+        if (baseAnimation == null) {
+            data.unpin()
+            throw KVipsImageOperationException("Failed to load input image.")
+        }
+
+        numberOfPages = vips_image_get_n_pages(baseAnimation)
+        loadAnimationFrames(baseAnimation, params)
     }
 
     override fun thumbnail(params: KVipsImageThumbnailOperationParams): KVipsImageOperations {
