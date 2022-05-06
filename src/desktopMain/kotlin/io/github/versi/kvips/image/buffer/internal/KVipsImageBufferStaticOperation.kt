@@ -62,7 +62,7 @@ internal sealed class KVipsImageBufferStaticOperation private constructor(
                 try {
                     val outputImage = runnable.invoke(pinnedImageData, operationParams, this)
                     outputImage?.let {
-                        return outputImage.writeToBufferOperation(params.outputImageParams, this)
+                        return outputImage.writeToBufferOperation(params.outputImageParams, null, this)
                     }
                 } catch (exception: KVipsImageOperationException) {
                     KVipsImageOperationError(exception)

@@ -64,10 +64,9 @@ internal class KVipsImageStaticOperationsNative : KVipsImageOperations {
     override fun finalize(params: KVipsImageOutputParams): KVipsImageOperationResult {
         memScope.defer {
             vips_thread_shutdown()
-            data.unpin()
         }
 
-        return image.writeToBufferOperation(params, memScope)
+        return image.writeToBufferOperation(params, data, memScope)
     }
 
     override fun dispose() {

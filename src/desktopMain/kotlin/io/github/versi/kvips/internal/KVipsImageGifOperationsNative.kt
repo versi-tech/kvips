@@ -68,7 +68,6 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
     override fun finalize(params: KVipsImageOutputParams): KVipsImageOperationResult {
         memScope.defer {
             vips_thread_shutdown()
-            data.unpin()
         }
         val context = vips_image_new()?.reinterpret<VipsObject>()
         try {
@@ -78,7 +77,7 @@ internal class KVipsImageGifOperationsNative : KVipsImageOperations {
                 throw KVipsImageOperationException("Failed to finalize animation.")
             }
             assembleAnimation(imageFrames!!, copyPages, outputAnimation, numberOfPages)
-            return outputAnimation.writeToBufferOperation(params, memScope)
+            return outputAnimation.writeToBufferOperation(params, data, memScope)
         } finally {
             imagesContext.unref()
             context.unref()

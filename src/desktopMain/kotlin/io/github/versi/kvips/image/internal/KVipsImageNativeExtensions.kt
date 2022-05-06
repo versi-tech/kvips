@@ -273,13 +273,15 @@ internal fun CPointer<VipsImage>.embed(
 
 internal fun CPointerVar<VipsImage>.writeToBufferOperation(
     params: KVipsImageOutputParams,
+    inputData: Pinned<UByteArray>?,
     memScope: MemScope
 ): KVipsImageOperationResult {
-    return this.value!!.writeToBufferOperation(params, memScope)
+    return this.value!!.writeToBufferOperation(params, inputData, memScope)
 }
 
 internal fun CPointer<VipsImage>.writeToBufferOperation(
     params: KVipsImageOutputParams,
+    inputData: Pinned<UByteArray>?,
     memScope: MemScope
 ): KVipsImageOperationResult {
     val imageBuffer = memScope.alloc<COpaquePointerVar>()
@@ -303,6 +305,7 @@ internal fun CPointer<VipsImage>.writeToBufferOperation(
     } catch (exception: KVipsImageOperationException) {
         return KVipsImageOperationError(exception)
     } finally {
+        inputData?.unpin()
         this.unref()
         g_free(imageBuffer.value)
     }

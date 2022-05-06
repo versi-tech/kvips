@@ -16,6 +16,7 @@ class KVipsImageBufferSVGRenderer {
             val svgImage = svgText.asSvg(this)
             return svgImage.writeToBufferOperation(
                 params = outputImageOutputParams,
+                inputData = null,
                 memScope = this
             )
         }

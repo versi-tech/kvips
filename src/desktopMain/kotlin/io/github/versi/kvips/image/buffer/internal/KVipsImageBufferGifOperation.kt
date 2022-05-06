@@ -104,7 +104,7 @@ internal sealed class KVipsImageBufferGifOperation(
                         assembleAnimation(processedFrames, copyPages, outputAnimation, numberOfPages)
                         sourceAnimation.unref()
                         context.unref()
-                        return outputAnimation.writeToBufferOperation(params.outputImageParams, this)
+                        return outputAnimation.writeToBufferOperation(params.outputImageParams, null,this)
                     }
                     sourceAnimation.unref()
                     context.unref()
