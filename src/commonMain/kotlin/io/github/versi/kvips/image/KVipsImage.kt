@@ -217,7 +217,7 @@ class KVipsImageComposeGradientOperationParams(
         </svg>
     """.trimIndent()
 
-    sealed class Gradient(val id: String, val offsets: List<GradientOffset>) {
+    sealed class Gradient(open val id: String, open val offsets: List<GradientOffset>) {
 
         protected fun List<GradientOffset>.toSvgString(): String {
             return this.sortedBy { it.offset }.joinToString(separator = "\n") {
@@ -226,10 +226,10 @@ class KVipsImageComposeGradientOperationParams(
         }
     }
 
-    class LinearGradient(
-        id: String,
-        offsets: List<GradientOffset>,
-        private val direction: Direction = Direction.Top
+    data class LinearGradient(
+        override val id: String,
+        override val offsets: List<GradientOffset>,
+        val direction: Direction = Direction.Top
     ) : Gradient(id, offsets) {
 
         sealed class Direction(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
@@ -266,15 +266,15 @@ class KVipsImageComposeGradientOperationParams(
         }
     }
 
-    class RadialGradient(
-        id: String,
-        offsets: List<GradientOffset>,
+    data class RadialGradient(
+        override val id: String,
+        override val offsets: List<GradientOffset>,
         private val params: Params
     ) : Gradient(id, offsets) {
 
         sealed class Point(
-            val x: Double,
-            val y: Double
+            open val x: Double,
+            open val y: Double
         ) {
             init {
                 require(x in 0.0..100.0)
@@ -288,8 +288,8 @@ class KVipsImageComposeGradientOperationParams(
             }
         }
 
-        class CenterPoint(x: Double, y: Double) : Point(x, y)
-        class FocalPoint(x: Double, y: Double) : Point(x, y)
+        data class CenterPoint(override val x: Double, override val y: Double) : Point(x, y)
+        data class FocalPoint(override val x: Double, override val y: Double) : Point(x, y)
 
         data class Params(val radius: Double, val centerPoint: CenterPoint, val focalPoint: FocalPoint) {
             init {
