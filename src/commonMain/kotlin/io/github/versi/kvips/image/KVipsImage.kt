@@ -217,7 +217,45 @@ class KVipsImageComposeGradientOperationParams(
         </svg>
     """.trimIndent()
 
-    data class Gradient(val id: String, val offsets: List<GradientOffset>, val direction: Direction = Direction.Top) {
+    sealed class Gradient(val id: String, val offsets: List<GradientOffset>) {
+
+        protected fun List<GradientOffset>.toSvgString(): String {
+            return this.sortedBy { it.offset }.joinToString(separator = "\n") {
+                """<stop offset="${it.offset}%" style="stop-color:${it.color}" />"""
+            }
+        }
+    }
+
+    class LinearGradient(
+        id: String,
+        offsets: List<GradientOffset>,
+        private val direction: Direction = Direction.Top
+    ) : Gradient(id, offsets) {
+
+        sealed class Direction(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
+            object TopLeft : Direction(0, 0, 100, 100)
+            object Top : Direction(50, 0, 50, 100)
+            object TopRight : Direction(100, 0, 0, 100)
+            object Left : Direction(0, 50, 100, 50)
+            object Right : Direction(100, 50, 0, 50)
+            object BottomLeft : Direction(0, 100, 100, 0)
+            object Bottom : Direction(50, 100, 50, 0)
+            object BottomRight : Direction(100, 100, 0, 0)
+            class Custom(x1: Int, y1: Int, x2: Int, y2: Int) : Direction(x1, y1, x2, y2) {
+                init {
+                    checkCoordinate(x1, "x1")
+                    checkCoordinate(y1, "y1")
+                    checkCoordinate(x2, "x2")
+                    checkCoordinate(y2, "y2")
+                }
+
+                private fun checkCoordinate(value: Int, name: String) {
+                    require(value in 0..100) {
+                        "Gradient coordinate percentage: $name must be in range <0, 100>"
+                    }
+                }
+            }
+        }
 
         override fun toString(): String {
             return """
@@ -226,11 +264,48 @@ class KVipsImageComposeGradientOperationParams(
             </linearGradient>
             """.trimIndent()
         }
+    }
 
-        private fun List<GradientOffset>.toSvgString(): String {
-            return this.sortedBy { it.offset }.joinToString(separator = "\n") {
-                """<stop offset="${it.offset}%" style="stop-color:${it.color}" />"""
+    class RadialGradient(
+        id: String,
+        offsets: List<GradientOffset>,
+        private val params: Params
+    ) : Gradient(id, offsets) {
+
+        sealed class Point(
+            val x: Double,
+            val y: Double
+        ) {
+            init {
+                require(x in 0.0..100.0)
+                {
+                    "RadialGradient Point is a percentage value: X $x must be in range <0, 100>"
+                }
+                require(y in 0.0..100.0)
+                {
+                    "RadialGradient Point is a percentage value: Y $y must be in range <0, 100>"
+                }
             }
+        }
+
+        class CenterPoint(x: Double, y: Double) : Point(x, y)
+        class FocalPoint(x: Double, y: Double) : Point(x, y)
+
+        data class Params(val radius: Double, val centerPoint: CenterPoint, val focalPoint: FocalPoint) {
+            init {
+                require(radius in 0.0..100.0)
+                {
+                    "RadialGradient radius is a percentage value: $radius must be in range <0, 100>"
+                }
+            }
+        }
+
+        override fun toString(): String {
+            return """
+            <radialGradient id="$id" cx="${params.centerPoint.x}%" cy="${params.centerPoint.y}%" r="${params.radius}%">
+                ${offsets.toSvgString()}
+            </radialGradient>
+            """.trimIndent()
         }
     }
 
@@ -248,31 +323,6 @@ class KVipsImageComposeGradientOperationParams(
             private val rgbRegex = Regex("^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6}|[a-fA-F0-9]{8})$")
 
             fun isRGB(color: String) = rgbRegex.matches(color)
-        }
-    }
-
-    sealed class Direction(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
-        object TopLeft : Direction(0, 0, 100, 100)
-        object Top : Direction(50, 0, 50, 100)
-        object TopRight : Direction(100, 0, 0, 100)
-        object Left : Direction(0, 50, 100, 50)
-        object Right : Direction(100, 50, 0, 50)
-        object BottomLeft : Direction(0, 100, 100, 0)
-        object Bottom : Direction(50, 100, 50, 0)
-        object BottomRight : Direction(100, 100, 0, 0)
-        class Custom(x1: Int, y1: Int, x2: Int, y2: Int) : Direction(x1, y1, x2, y2) {
-            init {
-                checkCoordinate(x1, "x1")
-                checkCoordinate(y1, "y1")
-                checkCoordinate(x2, "x2")
-                checkCoordinate(y2, "y2")
-            }
-
-            private fun checkCoordinate(value: Int, name: String) {
-                require(value in 0..100) {
-                    "Gradient coordinate percentage: $name must be in range <0, 100>"
-                }
-            }
         }
     }
 
