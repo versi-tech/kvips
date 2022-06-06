@@ -52,10 +52,44 @@ data class KVipsImageCropOperationParams(
     }
 }
 
+sealed class KVipsImageOverlaySize
+
+data class KVipsPercentImageOverlaySize(val widthPercent: Float, val heightPercent: Float? = null) :
+    KVipsImageOverlaySize() {
+    init {
+        require(widthPercent > 0f && widthPercent <= 1f) {
+            "Failed to initialize. WidthPercent must be greater than 0 and less or equal 1."
+        }
+        heightPercent?.let {
+            require(it > 0f && it <= 1f) {
+                "Failed to initialize. HeightPercent if set - must be greater than 0 and less or equal 1."
+            }
+        }
+    }
+}
+
+data class KVipsAbsoluteImageOverlaySize(val width: Float, val height: Float? = null) :
+    KVipsImageOverlaySize()
+
+sealed class KVipsImageOverlayMargin
+
+data class KVipsPercentImageOverlayMargin(
+    val verticalMarginPercent: Float = 0f,
+    val horizontalMarginPercent: Float = 0f
+) : KVipsImageOverlayMargin()
+
+data class KVipsAbsoluteImageOverlayMargin(
+    val verticalMargin: Float = 0f,
+    val horizontalMargin: Float = 0f
+) : KVipsImageOverlayMargin()
+
+data class KVipsImageOverlaySizeAndMargin(
+    val size: KVipsImageOverlaySize,
+    val margin: KVipsImageOverlayMargin
+)
+
 sealed class KVipsImageOverlayOperationParams(
-    open val widthPercent: Float, open val heightPercent: Float? = null,
-    open val verticalMarginPercent: Float = 0f,
-    open val horizontalMarginPercent: Float = 0f,
+    open val overlaySizeAndMargin: KVipsImageOverlaySizeAndMargin,
     open val verticalAlign: VerticalAlign = VerticalAlign.TOP,
     open val horizontalAlign: HorizontalAlign = HorizontalAlign.LEFT
 ) : KVipsImageOperationParams() {
@@ -69,17 +103,41 @@ sealed class KVipsImageOverlayOperationParams(
     }
 
     fun getWidth(sourceImageWidth: Int): Int {
-        return (sourceImageWidth * widthPercent).roundToInt()
+        return with(overlaySizeAndMargin.size) {
+            when (this) {
+                is KVipsPercentImageOverlaySize -> (sourceImageWidth * this.widthPercent).roundToInt()
+                is KVipsAbsoluteImageOverlaySize -> {
+                    val targetWidth = this.width.roundToInt()
+                    require(targetWidth < sourceImageWidth) {
+                        "Target width: $targetWidth must not be bigger than source image width: $sourceImageWidth"
+                    }
+                    targetWidth
+                }
+            }
+        }
     }
 
     fun getHeight(sourceImageHeight: Int): Int? {
-        return heightPercent?.let {
-            (sourceImageHeight * it).roundToInt()
+        return with(overlaySizeAndMargin.size) {
+            when (this) {
+                is KVipsPercentImageOverlaySize -> this.heightPercent?.let {
+                    (sourceImageHeight * it).roundToInt()
+                }
+                is KVipsAbsoluteImageOverlaySize -> {
+                    val targetHeight = this.height?.roundToInt()
+                    targetHeight?.let {
+                        require(targetHeight < sourceImageHeight) {
+                            "Target height: $targetHeight must not be bigger than source image height: $sourceImageHeight"
+                        }
+                    }
+                    targetHeight
+                }
+            }
         }
     }
 
     fun getOverlayX(overlayWidth: Int, sourceImageWidth: Int): Int {
-        val horizontalMargin = (sourceImageWidth * horizontalMarginPercent).roundToInt()
+        val horizontalMargin = getHorizontalMargin(sourceImageWidth)
         val overlayX = when (horizontalAlign) {
             HorizontalAlign.LEFT -> horizontalMargin
             HorizontalAlign.CENTER -> sourceImageWidth / 2 - overlayWidth / 2
@@ -89,7 +147,7 @@ sealed class KVipsImageOverlayOperationParams(
     }
 
     fun getOverlayY(overlayHeight: Int, sourceImageHeight: Int): Int {
-        val verticalMargin = (sourceImageHeight * verticalMarginPercent).roundToInt()
+        val verticalMargin = getVerticalMargin(sourceImageHeight)
         return when (verticalAlign) {
             VerticalAlign.TOP -> verticalMargin
             VerticalAlign.CENTER -> sourceImageHeight / 2 - overlayHeight / 2
@@ -100,20 +158,40 @@ sealed class KVipsImageOverlayOperationParams(
     fun getThumbnailParams(sourceImageWidth: Int, sourceImageHeight: Int): KVipsImageThumbnailOperationParams {
         return KVipsImageThumbnailOperationParams(
             width = getWidth(sourceImageWidth),
-            // if height percent is not set then we set height to 0 to resolve it in a way to keep aspect ratio
+            // if height is not set then we set height to 0 to resolve it in a way to keep aspect ratio
             height = getHeight(sourceImageHeight) ?: 0,
             // if widthPercent == 1.0f we enable canvas-overlay mode with crop
-            crop = widthPercent == 1.0f
-        )
+            crop = with(overlaySizeAndMargin.size) {
+                this is KVipsPercentImageOverlaySize && this.widthPercent == 1.0f
+            })
     }
 
-    protected fun valuesCheck() {
-        require(widthPercent > 0f && widthPercent <= 1f) {
-            "Failed to initialize. Text widthPercent must be greater than 0 and less or equal 1."
+    private fun getHorizontalMargin(sourceImageWidth: Int): Int {
+        return with(overlaySizeAndMargin.margin) {
+            when (this) {
+                is KVipsPercentImageOverlayMargin -> (sourceImageWidth * this.horizontalMarginPercent).roundToInt()
+                is KVipsAbsoluteImageOverlayMargin -> {
+                    val margin = this.horizontalMargin.roundToInt()
+                    require(margin < sourceImageWidth) {
+                        "Horizontal margin: $margin must be smaller then source image width: $sourceImageWidth"
+                    }
+                    margin
+                }
+            }
         }
-        heightPercent?.let {
-            require(it > 0f && it <= 1f) {
-                "Failed to initialize. Text heightPercent if set - must be greater than 0 and less or equal 1."
+    }
+
+    private fun getVerticalMargin(sourceImageHeight: Int): Int {
+        return with(overlaySizeAndMargin.margin) {
+            when (this) {
+                is KVipsPercentImageOverlayMargin -> (sourceImageHeight * this.verticalMarginPercent).roundToInt()
+                is KVipsAbsoluteImageOverlayMargin -> {
+                    val margin = this.verticalMargin.roundToInt()
+                    require(margin < sourceImageHeight) {
+                        "Vertical margin: $margin must be smaller then source image height: $sourceImageHeight"
+                    }
+                    margin
+                }
             }
         }
     }
@@ -123,16 +201,11 @@ data class KVipsImageTextOperationParams(
     private val textContent: String,
     private val textColor: String = RGB_WHITE,
     private val shadowColor: String? = null,
-    override val widthPercent: Float, override val heightPercent: Float? = null,
-    override val verticalMarginPercent: Float = 0f,
-    override val horizontalMarginPercent: Float = 0f,
+    override val overlaySizeAndMargin: KVipsImageOverlaySizeAndMargin,
     override val verticalAlign: VerticalAlign = VerticalAlign.TOP,
     override val horizontalAlign: HorizontalAlign = HorizontalAlign.LEFT
 ) : KVipsImageOverlayOperationParams(
-    widthPercent,
-    heightPercent,
-    verticalMarginPercent,
-    horizontalMarginPercent,
+    overlaySizeAndMargin,
     verticalAlign,
     horizontalAlign
 ) {
@@ -141,55 +214,36 @@ data class KVipsImageTextOperationParams(
     val shadowText = if (shadowColor.isNullOrBlank()) null else {
         "<span fgcolor='$shadowColor' bgalpha='100%'>$textContent</span>"
     }
-
-    init {
-        valuesCheck()
-    }
 }
 
 sealed class KVipsImageComposeOperationParams(
-    override val widthPercent: Float, override val heightPercent: Float? = null,
-    override val verticalMarginPercent: Float = 0f,
-    override val horizontalMarginPercent: Float = 0f,
+    override val overlaySizeAndMargin: KVipsImageOverlaySizeAndMargin,
     override val verticalAlign: VerticalAlign = VerticalAlign.TOP,
     override val horizontalAlign: HorizontalAlign = HorizontalAlign.LEFT
 ) : KVipsImageOverlayOperationParams(
-    widthPercent,
-    heightPercent,
-    verticalMarginPercent,
-    horizontalMarginPercent,
+    overlaySizeAndMargin,
     verticalAlign,
     horizontalAlign
 )
 
 class KVipsImageComposeFileOperationParams(
-    val filePath: String, override val widthPercent: Float, override val heightPercent: Float? = null,
-    override val verticalMarginPercent: Float = 0f,
-    override val horizontalMarginPercent: Float = 0f,
+    val filePath: String, override val overlaySizeAndMargin: KVipsImageOverlaySizeAndMargin,
     override val verticalAlign: VerticalAlign = VerticalAlign.TOP,
     override val horizontalAlign: HorizontalAlign = HorizontalAlign.LEFT
 ) :
     KVipsImageComposeOperationParams(
-        widthPercent,
-        heightPercent,
-        verticalMarginPercent,
-        horizontalMarginPercent,
+        overlaySizeAndMargin,
         verticalAlign,
         horizontalAlign
     )
 
 class KVipsImageComposeByteArrayOperationParams(
-    val overlayData: ByteArray, override val widthPercent: Float, override val heightPercent: Float? = null,
-    override val verticalMarginPercent: Float = 0f,
-    override val horizontalMarginPercent: Float = 0f,
+    val overlayData: ByteArray, override val overlaySizeAndMargin: KVipsImageOverlaySizeAndMargin,
     override val verticalAlign: VerticalAlign = VerticalAlign.TOP,
     override val horizontalAlign: HorizontalAlign = HorizontalAlign.LEFT
 ) :
     KVipsImageComposeOperationParams(
-        widthPercent,
-        heightPercent,
-        verticalMarginPercent,
-        horizontalMarginPercent,
+        overlaySizeAndMargin,
         verticalAlign,
         horizontalAlign
     )
@@ -198,10 +252,16 @@ class KVipsImageComposeGradientOperationParams(
     gradients: List<Gradient>
 ) :
     KVipsImageComposeOperationParams(
-        1.0f,
-        heightPercent = 1.0f,
-        0f,
-        0f,
+        KVipsImageOverlaySizeAndMargin(
+            size = KVipsPercentImageOverlaySize(
+                1.0f,
+                heightPercent = 1.0f
+            ),
+            margin = KVipsPercentImageOverlayMargin(
+                0f,
+                0f
+            )
+        ),
         VerticalAlign.TOP,
         HorizontalAlign.LEFT
     ) {
