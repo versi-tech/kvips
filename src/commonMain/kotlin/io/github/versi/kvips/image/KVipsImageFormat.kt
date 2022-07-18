@@ -18,6 +18,7 @@ sealed class KVipsImageFormat(val extension: String) {
                 KVipsImageWEBP.name -> KVipsImageWEBP
                 KVipsImagePDF.name -> KVipsImagePDF
                 KVipsImageSVG.name -> KVipsImageSVG
+                KVipsImageBMP.name -> KVipsImageBMP
                 else -> throw KVipsImageFormatNotSupportedException(name)
             }
         }
@@ -35,6 +36,7 @@ sealed class KVipsImageFormat(val extension: String) {
                 KVipsImageWEBP.loaderSuffix -> KVipsImageWEBP
                 KVipsImagePDF.loaderSuffix -> KVipsImagePDF
                 KVipsImageSVG.loaderSuffix -> KVipsImageSVG
+                KVipsImageBMP.loaderSuffix -> KVipsImageBMP
                 else -> throw KVipsImageFormatNotSupportedException(loader)
             }
         }
@@ -72,6 +74,13 @@ object KVipsImagePDF : KVipsImageFormat(".pdf") {
 
 object KVipsImageSVG : KVipsImageFormat(".svg") {
     override val loaderSuffix = "svgload"
+}
+
+object KVipsImageBMP : KVipsImageFormat(".bmp") {
+    // libvips uses ImageMagick internally to support BMP:
+    // https://github.com/libvips/libvips/issues/1528
+    // https://github.com/libvips/libvips/blob/v8.12.2/test/test-suite/test_foreign.py#L615
+    override val loaderSuffix = "magickload"
 }
 
 class KVipsImageFormatNotSupportedException(formatName: String) :

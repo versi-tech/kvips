@@ -54,7 +54,7 @@ internal fun Pinned<UByteArray>.thumbnailBuffer(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to resize image.")
+        throw KVipsNativeImageOperationException("Failed to resize image")
     }
     return image
 }
@@ -78,7 +78,7 @@ internal fun CPointer<UByteVar>.thumbnailBufferFrames(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to resize image.")
+        throw KVipsNativeImageOperationException("Failed to resize image")
     }
 }
 
@@ -96,7 +96,7 @@ internal fun CPointer<VipsImage>.thumbnail(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to resize image.")
+        throw KVipsNativeImageOperationException("Failed to resize image")
     }
 }
 
@@ -111,7 +111,7 @@ internal fun CPointer<VipsImage>.gaussBlur(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to perform gauss blur on image.")
+        throw KVipsNativeImageOperationException("Failed to perform gauss blur on image")
     }
 }
 
@@ -130,7 +130,7 @@ internal fun CPointerVar<VipsImage>.asText(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to generate image with text: $text.")
+            throw KVipsNativeImageOperationException("Failed to generate image with text: $text")
         }
     } else {
         if (vips_text(
@@ -141,7 +141,7 @@ internal fun CPointerVar<VipsImage>.asText(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to generate image with text: $text.")
+            throw KVipsNativeImageOperationException("Failed to generate image with text: $text")
         }
     }
 }
@@ -156,7 +156,7 @@ internal fun String.asSvg(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to generate gradient image from text: $this.")
+        throw KVipsNativeImageOperationException("Failed to generate gradient image from text: $this")
     }
     return svgImage
 }
@@ -184,7 +184,7 @@ internal fun String.thumbnail(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to resize image from file.")
+        throw KVipsNativeImageOperationException("Failed to resize image from file")
     }
     return image
 }
@@ -196,7 +196,7 @@ internal fun CPointer<VipsImage>.resize(params: KVipsImageScaleOperationParams, 
             params.hScale, "vscale", params.vScale, "kernel", 1, NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to resize image.")
+        throw KVipsNativeImageOperationException("Failed to resize image")
     }
 }
 
@@ -211,7 +211,7 @@ internal fun CPointer<VipsImage>.crop(cropParams: KVipsImageCropOperationParams,
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to crop image.")
+        throw KVipsNativeImageOperationException("Failed to crop image")
     }
 }
 
@@ -234,7 +234,7 @@ internal fun CPointer<VipsImage>.compose(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to compose images.")
+            throw KVipsNativeImageOperationException("Failed to compose images")
         }
     } else {
         if (vips_composite2(
@@ -245,7 +245,7 @@ internal fun CPointer<VipsImage>.compose(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to compose images.")
+            throw KVipsNativeImageOperationException("Failed to compose images")
         }
     }
 }
@@ -267,7 +267,7 @@ internal fun CPointer<VipsImage>.embed(
             NULL
         ) != 0
     ) {
-        throw KVipsImageOperationException("Failed to embed image.")
+        throw KVipsNativeImageOperationException("Failed to embed image")
     }
 }
 
@@ -298,8 +298,8 @@ internal fun CPointer<VipsImage>.writeToBufferOperation(
         }
 
         return KVipsImageOperationError(
-            KVipsImageOperationException(
-                "Failed during conversion of bytes data in buffer scaling."
+            KVipsNativeImageOperationException(
+                "Failed during conversion of bytes data in buffer scaling"
             )
         )
     } catch (exception: KVipsImageOperationException) {
@@ -319,9 +319,10 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
 ) {
     val strip = if (outputImageParams.stripMetadata) TRUE else FALSE
     val outputFormat = outputImageParams.format ?: this.getFormat(memScope)
-    if (outputFormat == KVipsImageGIF) {
+    if (outputFormat == KVipsImageGIF || outputFormat == KVipsImageBMP) {
         // vips_gifsave_buffer used under the hood for GIF does not support Quality param currently:
         // https://www.libvips.org/API/current/VipsForeignSave.html#vips-gifsave-buffer
+        // same case with BMP:  magicksave_bmp_buffer: no property named `Q'
         if (vips_image_write_to_buffer(
                 this,
                 outputFormat.extension,
@@ -332,7 +333,7 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to save image to buffer with params: $outputImageParams")
+            throw KVipsNativeImageOperationException("Failed to save image to buffer with params: $outputImageParams")
         }
     } else {
         if (vips_image_write_to_buffer(
@@ -347,7 +348,7 @@ private fun CValuesRef<VipsImage>.writeToBuffer(
                 NULL
             ) != 0
         ) {
-            throw KVipsImageOperationException("Failed to save image to buffer with params: $outputImageParams")
+            throw KVipsNativeImageOperationException("Failed to save image to buffer with params: $outputImageParams")
         }
     }
 }
@@ -363,7 +364,7 @@ internal fun CValuesRef<VipsImage>.writeToFile(
             stripMetadata
         ) != 0
     ) {
-        throw KVipsImageOperationException(
+        throw KVipsNativeImageOperationException(
             "Failed to save image to file: $outputImagePath"
         )
     }

@@ -5,7 +5,7 @@ import kotlin.math.roundToInt
 
 private const val RGB_WHITE = "#FFFFFF"
 
-class KVipsImageOperationException(message: String) : Exception(message)
+open class KVipsImageOperationException(message: String) : Exception(message)
 
 data class KVipsImageQuality(val value: Int = 75) {
     init {
